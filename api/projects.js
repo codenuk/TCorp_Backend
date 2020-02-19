@@ -39,7 +39,8 @@ projectRouter.get('/', verifyToken, (req, res, next) => {
 			project.warranty_duration,
 			project.billing_configuration_id,
 			project.project_category_id,
-			project.customer_id,
+            project.customer_id,
+            project.sign_contract,
 			project.is_aborted,
 			project.is_template,
 			project_category.type,
@@ -240,7 +241,7 @@ projectRouter.get('/:tcorp_id', verifyToken, function(req, res, next) {
     var projectID = req.params.tcorp_id;
     db.query(`
         SELECT project.id, project.tcorp_id, project.customer_id, project.name_th, project.description, project.value, project.contract_id,
-        project.end_contract_date, project.warranty_duration, project.billing_configuration_id, project.project_category_id, project.is_aborted, project.is_template, customer.name, project_category.type
+        project.end_contract_date, project.warranty_duration, project.billing_configuration_id, project.project_category_id, project.sign_contract, project.is_aborted, project.is_template, customer.name, project_category.type
         FROM ((project
         INNER JOIN
             customer ON project.customer_id = customer.id)
