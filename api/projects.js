@@ -4,7 +4,7 @@ const verifyToken = require('../auth/VerifyToken');
 const moment = require('moment');
 const express = require('express');
 const bodyParser = require('body-parser');
-const projectRouter = express.Router(mergeParams=true);
+const projectRouter = express.Router(mergeParams = true);
 
 projectRouter.use(bodyParser.json()); // support json encoded bodies
 projectRouter.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
@@ -39,7 +39,8 @@ projectRouter.get('/', verifyToken, (req, res, next) => {
 			project.warranty_duration,
 			project.billing_configuration_id,
 			project.project_category_id,
-			project.customer_id,
+            project.customer_id,
+            project.sign_contract,
 			project.is_aborted,
 			project.is_template,
 			project_category.type,
@@ -53,10 +54,9 @@ projectRouter.get('/', verifyToken, (req, res, next) => {
 			project_category ON project.project_category_id = project_category.id
 				INNER JOIN
 			customer ON project.customer_id = customer.id
-		ORDER BY project.id;`, function (err, result, fields) 
-    {
-    if (err) throw err;
-	    res.json(result);
+		ORDER BY project.id;`, function (err, result, fields) {
+        if (err) throw err;
+        res.json(result);
     });
 });
 
@@ -68,96 +68,1081 @@ projectRouter.post('/', verifyToken, function (req, res) {
     //   name_th, description, value, contract_id, end_contract_date, warranty_duration, billing_configuration_id, project_category_id, customer_id, is_aborted, is_template
     var projectInfo = req.body;
     var projectID = 0
-    console.log(">>", projectInfo);
+    console.log(">> CREATE Project", projectInfo);
+
     db.query(`INSERT INTO project (${Object.keys(projectInfo).join()}) 
-                        VALUES ?`, [[Object.values(projectInfo)]], function(err, result, fields) {
-    if (err) throw err;
+                        VALUES ?`, [[Object.values(projectInfo)]], function (err, result, fields) {
+        if (err) throw err;
         projectID = result.insertId
-        taskInfo = {
-            "seq_no": 0,
-            "group_no": 1,
-            "task_status_id": 1, 
-            "assigned_to_id": 1,
-            "description": "ก่อนเซ็นสัญญา",
-            "project_id": projectID,
-            "is_header": 1,
-            "ui_group_task": "down"
-        }
-        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
-        VALUES ?`, [[Object.values(taskInfo)]], function(err, result2, fields) {
-            if (err) throw err;
+        console.log(">> CREATE Project project_category_id", projectInfo.project_category_id);
+
+        if (projectInfo.project_category_id === "1") {
+            console.log("รับเหมา >>>>")
+            taskInfo = {
+                "seq_no": 0,
+                "group_no": 1,
+                "task_status_id": 1,
+                "assigned_to_id": 1,
+                "description": "ก่อนเซ็นสัญญา",
+                "project_id": projectID,
+                "is_header": 1,
+                "ui_group_task": "down"
+            }
+            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+            VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                if (err) throw err;
                 taskInfo = {
                     "seq_no": 1,
                     "group_no": 1,
-                    "task_status_id": 0, 
+                    "task_status_id": 0,
                     "assigned_to_id": 1,
                     "deadline": "2019-08-14 00:00:00.000",
                     "updated_at": new Date(),
-                    "description": "ตัวอย่าง",
+                    "description": "เซ็นสัญญา",
                     "project_id": projectID,
                     "is_header": 0,
-                    "ui_group_task": "down" 
+                    "ui_group_task": "down"
                 }
                 db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
-                VALUES ?`, [[Object.values(taskInfo)]], function(err, result2, fields) {
+                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
                     if (err) throw err;
-
+                    taskInfo = {
+                        "seq_no": 2,
+                        "group_no": 1,
+                        "task_status_id": 0,
+                        "assigned_to_id": 1,
+                        "deadline": "2019-08-14 00:00:00.000",
+                        "updated_at": new Date(),
+                        "description": "ยืนยันราคา",
+                        "project_id": projectID,
+                        "is_header": 0,
+                        "ui_group_task": "down"
+                    }
+                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                        VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                        if (err) throw err;
                         taskInfo = {
-                            "seq_no": 2,
-                            "group_no": 2,
-                            "task_status_id": 1, 
+                            "seq_no": 3,
+                            "group_no": 1,
+                            "task_status_id": 0,
                             "assigned_to_id": 1,
                             "deadline": "2019-08-14 00:00:00.000",
-                            "description": "หลังเซ็นสัญญา",
+                            "updated_at": new Date(),
+                            "description": "ลดราคา",
                             "project_id": projectID,
-                            "is_header": 1,
-                            "ui_group_task": "down" 
+                            "is_header": 0,
+                            "ui_group_task": "down"
                         }
                         db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
-                            VALUES ?`, [[Object.values(taskInfo)]], function(err, result, fields) {
+                            VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
                             if (err) throw err;
-                            
                             taskInfo = {
-                                "seq_no": 3,
-                                "group_no": 3,
-                                "task_status_id": 0, 
+                                "seq_no": 4,
+                                "group_no": 1,
+                                "task_status_id": 0,
                                 "assigned_to_id": 1,
                                 "deadline": "2019-08-14 00:00:00.000",
                                 "updated_at": new Date(),
-                                "description": "ทีมช่าง",
+                                "description": "ยื่นงาน",
                                 "project_id": projectID,
-                                "is_header": 1,
-                                "ui_group_task": "down" 
+                                "is_header": 0,
+                                "ui_group_task": "down"
                             }
                             db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
-                                VALUES ?`, [[Object.values(taskInfo)]], function(err, result2, fields) {
+                                VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
                                 if (err) throw err;
-                                boqInfo = {
-                                    "name": "BOQ_Test",
-                                    "project_id": projectID
+                                taskInfo = {
+                                    "seq_no": 5,
+                                    "group_no": 1,
+                                    "task_status_id": 0,
+                                    "assigned_to_id": 1,
+                                    "deadline": "2019-08-14 00:00:00.000",
+                                    "updated_at": new Date(),
+                                    "description": "เสนอราคาทำงบประมาณ",
+                                    "project_id": projectID,
+                                    "is_header": 0,
+                                    "ui_group_task": "down"
                                 }
+                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                    if (err) throw err;
 
-                                db.query(`INSERT INTO bill_of_quantity (${Object.keys(boqInfo).join()}) 
-                                VALUES ?`, [[Object.values(boqInfo)]], function(err, result, fields) {
-                                if (err) throw err;
-                                    res.json({
-                                        id: result.insertId
+                                    taskInfo = {
+                                        "seq_no": 6,
+                                        "group_no": 2,
+                                        "task_status_id": 1,
+                                        "assigned_to_id": 1,
+                                        "deadline": "2019-08-14 00:00:00.000",
+                                        "updated_at": new Date(),
+                                        "description": "หลังเซ็นสัญญา",
+                                        "project_id": projectID,
+                                        "is_header": 1,
+                                        "ui_group_task": "down"
+                                    }
+                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                        if (err) throw err;
+
+                                        taskInfo = {
+                                            "seq_no": 7,
+                                            "group_no": 2,
+                                            "task_status_id": 0,
+                                            "assigned_to_id": 1,
+                                            "deadline": "2019-08-14 00:00:00.000",
+                                            "updated_at": new Date(),
+                                            "description": "ส่งหนังสือแจ้งประชุม",
+                                            "project_id": projectID,
+                                            "is_header": 0,
+                                            "ui_group_task": "down"
+                                        }
+                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                            if (err) throw err;
+
+                                            taskInfo = {
+                                                "seq_no": 8,
+                                                "group_no": 2,
+                                                "task_status_id": 0,
+                                                "assigned_to_id": 1,
+                                                "deadline": "2019-08-14 00:00:00.000",
+                                                "updated_at": new Date(),
+                                                "description": "ประชุม (Kick off)",
+                                                "project_id": projectID,
+                                                "is_header": 0,
+                                                "ui_group_task": "down"
+                                            }
+                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                if (err) throw err;
+                                                taskInfo = {
+                                                    "seq_no": 9,
+                                                    "group_no": 2,
+                                                    "task_status_id": 0,
+                                                    "assigned_to_id": 1,
+                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                    "updated_at": new Date(),
+                                                    "description": "ส่งหนังสือสรุปบันทึกการประชุม",
+                                                    "project_id": projectID,
+                                                    "is_header": 0,
+                                                    "ui_group_task": "down"
+                                                }
+                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                    if (err) throw err;
+                                                    taskInfo = {
+                                                        "seq_no": 10,
+                                                        "group_no": 2,
+                                                        "task_status_id": 0,
+                                                        "assigned_to_id": 1,
+                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                        "updated_at": new Date(),
+                                                        "description": "ส่งหนังสือขออนุมัติ PAT",
+                                                        "project_id": projectID,
+                                                        "is_header": 0,
+                                                        "ui_group_task": "down"
+                                                    }
+                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                        if (err) throw err;
+                                                        taskInfo = {
+                                                            "seq_no": 11,
+                                                            "group_no": 2,
+                                                            "task_status_id": 0,
+                                                            "assigned_to_id": 1,
+                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                            "updated_at": new Date(),
+                                                            "description": "ส่งหนังสือแจ้งส่งของ",
+                                                            "project_id": projectID,
+                                                            "is_header": 0,
+                                                            "ui_group_task": "down"
+                                                        }
+                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                            if (err) throw err;
+                                                            taskInfo = {
+                                                                "seq_no": 12,
+                                                                "group_no": 2,
+                                                                "task_status_id": 0,
+                                                                "assigned_to_id": 1,
+                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                "updated_at": new Date(),
+                                                                "description": "ส่งหนังสือแจ้งตรวจรับ PAT",
+                                                                "project_id": projectID,
+                                                                "is_header": 0,
+                                                                "ui_group_task": "down"
+                                                            }
+                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                if (err) throw err;
+                                                                taskInfo = {
+                                                                    "seq_no": 13,
+                                                                    "group_no": 2,
+                                                                    "task_status_id": 0,
+                                                                    "assigned_to_id": 1,
+                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                    "updated_at": new Date(),
+                                                                    "description": "ส่งหนังสือขอเข้าสำรวจพื้นที่",
+                                                                    "project_id": projectID,
+                                                                    "is_header": 0,
+                                                                    "ui_group_task": "down"
+                                                                }
+                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                    if (err) throw err;
+                                                                    taskInfo = {
+                                                                        "seq_no": 14,
+                                                                        "group_no": 2,
+                                                                        "task_status_id": 0,
+                                                                        "assigned_to_id": 1,
+                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                        "updated_at": new Date(),
+                                                                        "description": "ส่งหนังสือขอเข้าทำการติดตั้ง",
+                                                                        "project_id": projectID,
+                                                                        "is_header": 0,
+                                                                        "ui_group_task": "down"
+                                                                    }
+                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                        if (err) throw err;
+                                                                        taskInfo = {
+                                                                            "seq_no": 15,
+                                                                            "group_no": 2,
+                                                                            "task_status_id": 0,
+                                                                            "assigned_to_id": 1,
+                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                            "updated_at": new Date(),
+                                                                            "description": "ส่งหนังสือแจ้งตรวจรับ FAT",
+                                                                            "project_id": projectID,
+                                                                            "is_header": 0,
+                                                                            "ui_group_task": "down"
+                                                                        }
+                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                            if (err) throw err;
+                                                                            taskInfo = {
+                                                                                "seq_no": 16,
+                                                                                "group_no": 2,
+                                                                                "task_status_id": 0,
+                                                                                "assigned_to_id": 1,
+                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                "updated_at": new Date(),
+                                                                                "description": "ส่งของ",
+                                                                                "project_id": projectID,
+                                                                                "is_header": 0,
+                                                                                "ui_group_task": "down"
+                                                                            }
+                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                if (err) throw err;
+                                                                                taskInfo = {
+                                                                                    "seq_no": 17,
+                                                                                    "group_no": 2,
+                                                                                    "task_status_id": 0,
+                                                                                    "assigned_to_id": 1,
+                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                    "updated_at": new Date(),
+                                                                                    "description": "ตรวจรับ PAT",
+                                                                                    "project_id": projectID,
+                                                                                    "is_header": 0,
+                                                                                    "ui_group_task": "down"
+                                                                                }
+                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                    if (err) throw err;
+                                                                                    taskInfo = {
+                                                                                        "seq_no": 18,
+                                                                                        "group_no": 2,
+                                                                                        "task_status_id": 0,
+                                                                                        "assigned_to_id": 1,
+                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                        "updated_at": new Date(),
+                                                                                        "description": "ตรวจรับ FAT",
+                                                                                        "project_id": projectID,
+                                                                                        "is_header": 0,
+                                                                                        "ui_group_task": "down"
+                                                                                    }
+                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                        if (err) throw err;
+                                                                                        taskInfo = {
+                                                                                            "seq_no": 19,
+                                                                                            "group_no": 2,
+                                                                                            "task_status_id": 0,
+                                                                                            "assigned_to_id": 1,
+                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                            "updated_at": new Date(),
+                                                                                            "description": "หนังสือแจ้งส่งมอบงานงวดที่ 1",
+                                                                                            "project_id": projectID,
+                                                                                            "is_header": 0,
+                                                                                            "ui_group_task": "down"
+                                                                                        }
+                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                            if (err) throw err;
+                                                                                            taskInfo = {
+                                                                                                "seq_no": 20,
+                                                                                                "group_no": 2,
+                                                                                                "task_status_id": 0,
+                                                                                                "assigned_to_id": 1,
+                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                "updated_at": new Date(),
+                                                                                                "description": "วางบิล งวดที่ 1",
+                                                                                                "project_id": projectID,
+                                                                                                "is_header": 0,
+                                                                                                "ui_group_task": "down"
+                                                                                            }
+                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                if (err) throw err;
+                                                                                                taskInfo = {
+                                                                                                    "seq_no": 21,
+                                                                                                    "group_no": 2,
+                                                                                                    "task_status_id": 0,
+                                                                                                    "assigned_to_id": 1,
+                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                    "updated_at": new Date(),
+                                                                                                    "description": "รับเชค งวดที่ 1",
+                                                                                                    "project_id": projectID,
+                                                                                                    "is_header": 0,
+                                                                                                    "ui_group_task": "down"
+                                                                                                }
+                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                    if (err) throw err;
+                                                                                                    taskInfo = {
+                                                                                                        "seq_no": 22,
+                                                                                                        "group_no": 2,
+                                                                                                        "task_status_id": 0,
+                                                                                                        "assigned_to_id": 1,
+                                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                                        "updated_at": new Date(),
+                                                                                                        "description": "หนังสือแจ้งส่งมอบงานงวดที่ 2",
+                                                                                                        "project_id": projectID,
+                                                                                                        "is_header": 0,
+                                                                                                        "ui_group_task": "down"
+                                                                                                    }
+                                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                        if (err) throw err;
+                                                                                                        taskInfo = {
+                                                                                                            "seq_no": 23,
+                                                                                                            "group_no": 2,
+                                                                                                            "task_status_id": 0,
+                                                                                                            "assigned_to_id": 1,
+                                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                                            "updated_at": new Date(),
+                                                                                                            "description": "วางบิล งวดที่ 2",
+                                                                                                            "project_id": projectID,
+                                                                                                            "is_header": 0,
+                                                                                                            "ui_group_task": "down"
+                                                                                                        }
+                                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                            if (err) throw err;
+                                                                                                            taskInfo = {
+                                                                                                                "seq_no": 24,
+                                                                                                                "group_no": 2,
+                                                                                                                "task_status_id": 0,
+                                                                                                                "assigned_to_id": 1,
+                                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                "updated_at": new Date(),
+                                                                                                                "description": "รับเชค งวดที่ 2",
+                                                                                                                "project_id": projectID,
+                                                                                                                "is_header": 0,
+                                                                                                                "ui_group_task": "down"
+                                                                                                            }
+                                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                if (err) throw err;
+                                                                                                                taskInfo = {
+                                                                                                                    "seq_no": 25,
+                                                                                                                    "group_no": 2,
+                                                                                                                    "task_status_id": 0,
+                                                                                                                    "assigned_to_id": 1,
+                                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                    "updated_at": new Date(),
+                                                                                                                    "description": "หนังสือแจ้งส่งมอบงานงวดที่ 3",
+                                                                                                                    "project_id": projectID,
+                                                                                                                    "is_header": 0,
+                                                                                                                    "ui_group_task": "down"
+                                                                                                                }
+                                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                    if (err) throw err;
+                                                                                                                    taskInfo = {
+                                                                                                                        "seq_no": 26,
+                                                                                                                        "group_no": 2,
+                                                                                                                        "task_status_id": 0,
+                                                                                                                        "assigned_to_id": 1,
+                                                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                        "updated_at": new Date(),
+                                                                                                                        "description": "วางบิล งวดที่ 3",
+                                                                                                                        "project_id": projectID,
+                                                                                                                        "is_header": 0,
+                                                                                                                        "ui_group_task": "down"
+                                                                                                                    }
+                                                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                        if (err) throw err;
+                                                                                                                        taskInfo = {
+                                                                                                                            "seq_no": 27,
+                                                                                                                            "group_no": 2,
+                                                                                                                            "task_status_id": 0,
+                                                                                                                            "assigned_to_id": 1,
+                                                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                            "updated_at": new Date(),
+                                                                                                                            "description": "รับเชค งวดที่ 3",
+                                                                                                                            "project_id": projectID,
+                                                                                                                            "is_header": 0,
+                                                                                                                            "ui_group_task": "down"
+                                                                                                                        }
+                                                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                            if (err) throw err;
+                                                                                                                            taskInfo = {
+                                                                                                                                "seq_no": 28,
+                                                                                                                                "group_no": 2,
+                                                                                                                                "task_status_id": 0,
+                                                                                                                                "assigned_to_id": 1,
+                                                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                "updated_at": new Date(),
+                                                                                                                                "description": "ขอรับหนังสือรับรองผลงาน",
+                                                                                                                                "project_id": projectID,
+                                                                                                                                "is_header": 0,
+                                                                                                                                "ui_group_task": "down"
+                                                                                                                            }
+                                                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                VALUES ?`, [[Object.values(taskInfo)]], function (err, result, fields) {
+                                                                                                                                if (err) throw err;
+
+                                                                                                                                taskInfo = {
+                                                                                                                                    "seq_no": 29,
+                                                                                                                                    "group_no": 3,
+                                                                                                                                    "task_status_id": 0,
+                                                                                                                                    "assigned_to_id": 1,
+                                                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                    "updated_at": new Date(),
+                                                                                                                                    "description": "ทีมช่าง",
+                                                                                                                                    "project_id": projectID,
+                                                                                                                                    "is_header": 1,
+                                                                                                                                    "ui_group_task": "down"
+                                                                                                                                }
+                                                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                            VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                                    if (err) throw err;
+                                                                                                                                    boqInfo = {
+                                                                                                                                        "name": "BOQ_Test",
+                                                                                                                                        "project_id": projectID
+                                                                                                                                    }
+
+                                                                                                                                    db.query(`INSERT INTO bill_of_quantity (${Object.keys(boqInfo).join()}) 
+                                                VALUES ?`, [[Object.values(boqInfo)]], function (err, result, fields) {
+                                                                                                                                        if (err) throw err;
+                                                                                                                                        res.json({
+                                                                                                                                            id: result.insertId
+                                                                                                                                        });
+                                                                                                                                    });
+                                                                                                                                });
+                                                                                                                            });
+                                                                                                                        });
+                                                                                                                    });
+                                                                                                                });
+                                                                                                            });
+                                                                                                        });
+                                                                                                    });
+                                                                                                });
+                                                                                            });
+                                                                                        });
+                                                                                    });
+                                                                                });
+                                                                            });
+                                                                        });
+                                                                    });
+                                                                });
+                                                            });
+                                                        });
+                                                    });
+                                                });
+                                            });
+                                        });
+
                                     });
                                 });
-                                        
                             });
 
-                            
                         });
+                    });
                 });
-        });
+            });
+        }
+        if (projectInfo.project_category_id === "2") {
+            console.log("จัดซื้อ >>>>")
+            taskInfo = {
+                "seq_no": 0,
+                "group_no": 1,
+                "task_status_id": 1,
+                "assigned_to_id": 1,
+                "description": "ก่อนเซ็นสัญญา",
+                "project_id": projectID,
+                "is_header": 1,
+                "ui_group_task": "down"
+            }
+            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+            VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                if (err) throw err;
+                taskInfo = {
+                    "seq_no": 1,
+                    "group_no": 1,
+                    "task_status_id": 0,
+                    "assigned_to_id": 1,
+                    "deadline": "2019-08-14 00:00:00.000",
+                    "updated_at": new Date(),
+                    "description": "เซ็นสัญญา",
+                    "project_id": projectID,
+                    "is_header": 0,
+                    "ui_group_task": "down"
+                }
+                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                    if (err) throw err;
+                    taskInfo = {
+                        "seq_no": 2,
+                        "group_no": 1,
+                        "task_status_id": 0,
+                        "assigned_to_id": 1,
+                        "deadline": "2019-08-14 00:00:00.000",
+                        "updated_at": new Date(),
+                        "description": "ยืนยันราคา",
+                        "project_id": projectID,
+                        "is_header": 0,
+                        "ui_group_task": "down"
+                    }
+                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                        VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                        if (err) throw err;
+                        taskInfo = {
+                            "seq_no": 3,
+                            "group_no": 1,
+                            "task_status_id": 0,
+                            "assigned_to_id": 1,
+                            "deadline": "2019-08-14 00:00:00.000",
+                            "updated_at": new Date(),
+                            "description": "ลดราคา",
+                            "project_id": projectID,
+                            "is_header": 0,
+                            "ui_group_task": "down"
+                        }
+                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                            VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                            if (err) throw err;
+                            taskInfo = {
+                                "seq_no": 4,
+                                "group_no": 1,
+                                "task_status_id": 0,
+                                "assigned_to_id": 1,
+                                "deadline": "2019-08-14 00:00:00.000",
+                                "updated_at": new Date(),
+                                "description": "ยื่นงาน",
+                                "project_id": projectID,
+                                "is_header": 0,
+                                "ui_group_task": "down"
+                            }
+                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                if (err) throw err;
+                                taskInfo = {
+                                    "seq_no": 5,
+                                    "group_no": 1,
+                                    "task_status_id": 0,
+                                    "assigned_to_id": 1,
+                                    "deadline": "2019-08-14 00:00:00.000",
+                                    "updated_at": new Date(),
+                                    "description": "เสนอราคาทำงบประมาณ",
+                                    "project_id": projectID,
+                                    "is_header": 0,
+                                    "ui_group_task": "down"
+                                }
+                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                    if (err) throw err;
 
+                                    taskInfo = {
+                                        "seq_no": 6,
+                                        "group_no": 2,
+                                        "task_status_id": 1,
+                                        "assigned_to_id": 1,
+                                        "deadline": "2019-08-14 00:00:00.000",
+                                        "updated_at": new Date(),
+                                        "description": "หลังเซ็นสัญญา",
+                                        "project_id": projectID,
+                                        "is_header": 1,
+                                        "ui_group_task": "down"
+                                    }
+                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                        if (err) throw err;
+
+                                        taskInfo = {
+                                            "seq_no": 7,
+                                            "group_no": 2,
+                                            "task_status_id": 0,
+                                            "assigned_to_id": 1,
+                                            "deadline": "2019-08-14 00:00:00.000",
+                                            "updated_at": new Date(),
+                                            "description": "ส่งหนังสือแจ้งประชุม",
+                                            "project_id": projectID,
+                                            "is_header": 0,
+                                            "ui_group_task": "down"
+                                        }
+                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                            if (err) throw err;
+
+                                            taskInfo = {
+                                                "seq_no": 8,
+                                                "group_no": 2,
+                                                "task_status_id": 0,
+                                                "assigned_to_id": 1,
+                                                "deadline": "2019-08-14 00:00:00.000",
+                                                "updated_at": new Date(),
+                                                "description": "ประชุม (Kick off)",
+                                                "project_id": projectID,
+                                                "is_header": 0,
+                                                "ui_group_task": "down"
+                                            }
+                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                if (err) throw err;
+                                                taskInfo = {
+                                                    "seq_no": 9,
+                                                    "group_no": 2,
+                                                    "task_status_id": 0,
+                                                    "assigned_to_id": 1,
+                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                    "updated_at": new Date(),
+                                                    "description": "ส่งหนังสือสรุปบันทึกการประชุม",
+                                                    "project_id": projectID,
+                                                    "is_header": 0,
+                                                    "ui_group_task": "down"
+                                                }
+                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                    if (err) throw err;
+                                                    taskInfo = {
+                                                        "seq_no": 10,
+                                                        "group_no": 2,
+                                                        "task_status_id": 0,
+                                                        "assigned_to_id": 1,
+                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                        "updated_at": new Date(),
+                                                        "description": "ส่งหนังสือขออนุมัติ PAT",
+                                                        "project_id": projectID,
+                                                        "is_header": 0,
+                                                        "ui_group_task": "down"
+                                                    }
+                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                        if (err) throw err;
+                                                        taskInfo = {
+                                                            "seq_no": 11,
+                                                            "group_no": 2,
+                                                            "task_status_id": 0,
+                                                            "assigned_to_id": 1,
+                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                            "updated_at": new Date(),
+                                                            "description": "ส่งหนังสือขอเข้าาำรวจพื้นที่",
+                                                            "project_id": projectID,
+                                                            "is_header": 0,
+                                                            "ui_group_task": "down"
+                                                        }
+                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                            if (err) throw err;
+                                                            taskInfo = {
+                                                                "seq_no": 12,
+                                                                "group_no": 2,
+                                                                "task_status_id": 0,
+                                                                "assigned_to_id": 1,
+                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                "updated_at": new Date(),
+                                                                "description": "เข้าสำรวจพื้นที่",
+                                                                "project_id": projectID,
+                                                                "is_header": 0,
+                                                                "ui_group_task": "down"
+                                                            }
+                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                if (err) throw err;
+                                                                taskInfo = {
+                                                                    "seq_no": 13,
+                                                                    "group_no": 2,
+                                                                    "task_status_id": 0,
+                                                                    "assigned_to_id": 1,
+                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                    "updated_at": new Date(),
+                                                                    "description": "หนังสือแจ้งส่งมอบ As Built drawing",
+                                                                    "project_id": projectID,
+                                                                    "is_header": 0,
+                                                                    "ui_group_task": "down"
+                                                                }
+                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                    if (err) throw err;
+                                                                    taskInfo = {
+                                                                        "seq_no": 14,
+                                                                        "group_no": 2,
+                                                                        "task_status_id": 0,
+                                                                        "assigned_to_id": 1,
+                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                        "updated_at": new Date(),
+                                                                        "description": "หนังสือขอข้อมูล IPVLAN",
+                                                                        "project_id": projectID,
+                                                                        "is_header": 0,
+                                                                        "ui_group_task": "down"
+                                                                    }
+                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                        if (err) throw err;
+                                                                        taskInfo = {
+                                                                            "seq_no": 15,
+                                                                            "group_no": 2,
+                                                                            "task_status_id": 0,
+                                                                            "assigned_to_id": 1,
+                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                            "updated_at": new Date(),
+                                                                            "description": "ส่งหนังสือแจ้งส่งของ",
+                                                                            "project_id": projectID,
+                                                                            "is_header": 0,
+                                                                            "ui_group_task": "down"
+                                                                        }
+                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                            if (err) throw err;
+                                                                            taskInfo = {
+                                                                                "seq_no": 16,
+                                                                                "group_no": 2,
+                                                                                "task_status_id": 0,
+                                                                                "assigned_to_id": 1,
+                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                "updated_at": new Date(),
+                                                                                "description": "ส่งของ",
+                                                                                "project_id": projectID,
+                                                                                "is_header": 0,
+                                                                                "ui_group_task": "down"
+                                                                            }
+                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                if (err) throw err;
+                                                                                taskInfo = {
+                                                                                    "seq_no": 17,
+                                                                                    "group_no": 2,
+                                                                                    "task_status_id": 0,
+                                                                                    "assigned_to_id": 1,
+                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                    "updated_at": new Date(),
+                                                                                    "description": "ส่งหนังสือขอเข้าทำการติดตั้ง",
+                                                                                    "project_id": projectID,
+                                                                                    "is_header": 0,
+                                                                                    "ui_group_task": "down"
+                                                                                }
+                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                    if (err) throw err;
+                                                                                    taskInfo = {
+                                                                                        "seq_no": 18,
+                                                                                        "group_no": 2,
+                                                                                        "task_status_id": 0,
+                                                                                        "assigned_to_id": 1,
+                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                        "updated_at": new Date(),
+                                                                                        "description": "เข้าติดตั้งอุปกรณ์",
+                                                                                        "project_id": projectID,
+                                                                                        "is_header": 0,
+                                                                                        "ui_group_task": "down"
+                                                                                    }
+                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                        if (err) throw err;
+                                                                                        taskInfo = {
+                                                                                            "seq_no": 19,
+                                                                                            "group_no": 2,
+                                                                                            "task_status_id": 0,
+                                                                                            "assigned_to_id": 1,
+                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                            "updated_at": new Date(),
+                                                                                            "description": "ส่งหนังสือแจ้งตรวจรับ PAT",
+                                                                                            "project_id": projectID,
+                                                                                            "is_header": 0,
+                                                                                            "ui_group_task": "down"
+                                                                                        }
+                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                            if (err) throw err;
+                                                                                            taskInfo = {
+                                                                                                "seq_no": 20,
+                                                                                                "group_no": 2,
+                                                                                                "task_status_id": 0,
+                                                                                                "assigned_to_id": 1,
+                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                "updated_at": new Date(),
+                                                                                                "description": "ตรวจรับ PAT",
+                                                                                                "project_id": projectID,
+                                                                                                "is_header": 0,
+                                                                                                "ui_group_task": "down"
+                                                                                            }
+                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                if (err) throw err;
+                                                                                                taskInfo = {
+                                                                                                    "seq_no": 21,
+                                                                                                    "group_no": 2,
+                                                                                                    "task_status_id": 0,
+                                                                                                    "assigned_to_id": 1,
+                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                    "updated_at": new Date(),
+                                                                                                    "description": "ส่งหนังสือแจ้งตรวจรับ FAT",
+                                                                                                    "project_id": projectID,
+                                                                                                    "is_header": 0,
+                                                                                                    "ui_group_task": "down"
+                                                                                                }
+                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                    if (err) throw err;
+                                                                                                    taskInfo = {
+                                                                                                        "seq_no": 22,
+                                                                                                        "group_no": 2,
+                                                                                                        "task_status_id": 0,
+                                                                                                        "assigned_to_id": 1,
+                                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                                        "updated_at": new Date(),
+                                                                                                        "description": "ตรวจรับ FAT",
+                                                                                                        "project_id": projectID,
+                                                                                                        "is_header": 0,
+                                                                                                        "ui_group_task": "down"
+                                                                                                    }
+                                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                        if (err) throw err;
+                                                                                                        taskInfo = {
+                                                                                                            "seq_no": 23,
+                                                                                                            "group_no": 2,
+                                                                                                            "task_status_id": 0,
+                                                                                                            "assigned_to_id": 1,
+                                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                                            "updated_at": new Date(),
+                                                                                                            "description": "หนังสือแจ้งส่งมอบงานงวดที่ 1",
+                                                                                                            "project_id": projectID,
+                                                                                                            "is_header": 0,
+                                                                                                            "ui_group_task": "down"
+                                                                                                        }
+                                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                            if (err) throw err;
+                                                                                                            taskInfo = {
+                                                                                                                "seq_no": 24,
+                                                                                                                "group_no": 2,
+                                                                                                                "task_status_id": 0,
+                                                                                                                "assigned_to_id": 1,
+                                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                "updated_at": new Date(),
+                                                                                                                "description": "วางบิล งวดที่ 1",
+                                                                                                                "project_id": projectID,
+                                                                                                                "is_header": 0,
+                                                                                                                "ui_group_task": "down"
+                                                                                                            }
+                                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                if (err) throw err;
+                                                                                                                taskInfo = {
+                                                                                                                    "seq_no": 25,
+                                                                                                                    "group_no": 2,
+                                                                                                                    "task_status_id": 0,
+                                                                                                                    "assigned_to_id": 1,
+                                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                    "updated_at": new Date(),
+                                                                                                                    "description": "รับเชค งวดที่ 1",
+                                                                                                                    "project_id": projectID,
+                                                                                                                    "is_header": 0,
+                                                                                                                    "ui_group_task": "down"
+                                                                                                                }
+                                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                    if (err) throw err;
+                                                                                                                    taskInfo = {
+                                                                                                                        "seq_no": 26,
+                                                                                                                        "group_no": 2,
+                                                                                                                        "task_status_id": 0,
+                                                                                                                        "assigned_to_id": 1,
+                                                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                        "updated_at": new Date(),
+                                                                                                                        "description": "หนังสือแจ้งส่งมอบงานงวดที่ 2",
+                                                                                                                        "project_id": projectID,
+                                                                                                                        "is_header": 0,
+                                                                                                                        "ui_group_task": "down"
+                                                                                                                    }
+                                                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                        if (err) throw err;
+                                                                                                                        taskInfo = {
+                                                                                                                            "seq_no": 27,
+                                                                                                                            "group_no": 2,
+                                                                                                                            "task_status_id": 0,
+                                                                                                                            "assigned_to_id": 1,
+                                                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                            "updated_at": new Date(),
+                                                                                                                            "description": "วางบิล งวดที่ 2",
+                                                                                                                            "project_id": projectID,
+                                                                                                                            "is_header": 0,
+                                                                                                                            "ui_group_task": "down"
+                                                                                                                        }
+                                                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                            if (err) throw err;
+                                                                                                                            taskInfo = {
+                                                                                                                                "seq_no": 28,
+                                                                                                                                "group_no": 2,
+                                                                                                                                "task_status_id": 0,
+                                                                                                                                "assigned_to_id": 1,
+                                                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                "updated_at": new Date(),
+                                                                                                                                "description": "รับเชค งวดที่ 2",
+                                                                                                                                "project_id": projectID,
+                                                                                                                                "is_header": 0,
+                                                                                                                                "ui_group_task": "down"
+                                                                                                                            }
+                                                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                                if (err) throw err;
+                                                                                                                                taskInfo = {
+                                                                                                                                    "seq_no": 29,
+                                                                                                                                    "group_no": 2,
+                                                                                                                                    "task_status_id": 0,
+                                                                                                                                    "assigned_to_id": 1,
+                                                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                    "updated_at": new Date(),
+                                                                                                                                    "description": "หนังสือแจ้งส่งมอบงานงวดที่ 3",
+                                                                                                                                    "project_id": projectID,
+                                                                                                                                    "is_header": 0,
+                                                                                                                                    "ui_group_task": "down"
+                                                                                                                                }
+                                                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                                    if (err) throw err;
+                                                                                                                                    taskInfo = {
+                                                                                                                                        "seq_no": 30,
+                                                                                                                                        "group_no": 2,
+                                                                                                                                        "task_status_id": 0,
+                                                                                                                                        "assigned_to_id": 1,
+                                                                                                                                        "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                        "updated_at": new Date(),
+                                                                                                                                        "description": "วางบิล งวดที่ 3",
+                                                                                                                                        "project_id": projectID,
+                                                                                                                                        "is_header": 0,
+                                                                                                                                        "ui_group_task": "down"
+                                                                                                                                    }
+                                                                                                                                    db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                                        if (err) throw err;
+                                                                                                                                        taskInfo = {
+                                                                                                                                            "seq_no": 31,
+                                                                                                                                            "group_no": 2,
+                                                                                                                                            "task_status_id": 0,
+                                                                                                                                            "assigned_to_id": 1,
+                                                                                                                                            "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                            "updated_at": new Date(),
+                                                                                                                                            "description": "รับเชค งวดที่ 3",
+                                                                                                                                            "project_id": projectID,
+                                                                                                                                            "is_header": 0,
+                                                                                                                                            "ui_group_task": "down"
+                                                                                                                                        }
+                                                                                                                                        db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                                            if (err) throw err;
+                                                                                                                                            taskInfo = {
+                                                                                                                                                "seq_no": 32,
+                                                                                                                                                "group_no": 2,
+                                                                                                                                                "task_status_id": 0,
+                                                                                                                                                "assigned_to_id": 1,
+                                                                                                                                                "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                                "updated_at": new Date(),
+                                                                                                                                                "description": "ขอรับหนังสือรับรองผลงาน",
+                                                                                                                                                "project_id": projectID,
+                                                                                                                                                "is_header": 0,
+                                                                                                                                                "ui_group_task": "down"
+                                                                                                                                            }
+                                                                                                                                            db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                VALUES ?`, [[Object.values(taskInfo)]], function (err, result, fields) {
+                                                                                                                                                if (err) throw err;
+
+                                                                                                                                                taskInfo = {
+                                                                                                                                                    "seq_no": 33,
+                                                                                                                                                    "group_no": 3,
+                                                                                                                                                    "task_status_id": 0,
+                                                                                                                                                    "assigned_to_id": 1,
+                                                                                                                                                    "deadline": "2019-08-14 00:00:00.000",
+                                                                                                                                                    "updated_at": new Date(),
+                                                                                                                                                    "description": "ทีมช่าง",
+                                                                                                                                                    "project_id": projectID,
+                                                                                                                                                    "is_header": 1,
+                                                                                                                                                    "ui_group_task": "down"
+                                                                                                                                                }
+                                                                                                                                                db.query(`INSERT INTO task (${Object.keys(taskInfo).join()}) 
+                                    VALUES ?`, [[Object.values(taskInfo)]], function (err, result2, fields) {
+                                                                                                                                                    if (err) throw err;
+                                                                                                                                                    boqInfo = {
+                                                                                                                                                        "name": "BOQ_Test",
+                                                                                                                                                        "project_id": projectID
+                                                                                                                                                    }
+
+                                                                                                                                                    db.query(`INSERT INTO bill_of_quantity (${Object.keys(boqInfo).join()}) 
+                                    VALUES ?`, [[Object.values(boqInfo)]], function (err, result, fields) {
+                                                                                                                                                        if (err) throw err;
+                                                                                                                                                        res.json({
+                                                                                                                                                            id: result.insertId
+                                                                                                                                                        });
+                                                                                                                                                    });
+
+                                                                                                                                                });
+                                                                                                                                            });
+                                                                                                                                        });
+                                                                                                                                    });
+                                                                                                                                });
+                                                                                                                            });
+                                                                                                                        });
+                                                                                                                    });
+                                                                                                                });
+                                                                                                            });
+                                                                                                        });
+                                                                                                    });
+                                                                                                });
+                                                                                            });
+                                                                                        });
+                                                                                    });
+                                                                                });
+                                                                            });
+                                                                        });
+                                                                    });
+                                                                });
+                                                            });
+                                                        });
+                                                    });
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        }
     });
 })
 
 // GET /project/overview
 projectRouter.get('/overview', verifyToken, (req, res, next) => {
-	db.query(`
+    db.query(`
 		SELECT 
 			project.id,
 			project.tcorp_id,
@@ -225,32 +1210,31 @@ projectRouter.get('/overview', verifyToken, (req, res, next) => {
                 task_status.status = 'เสร็จสมบูรณ์'
                 AND task.is_header = 0
 			GROUP BY project_id) total_finished ON project.id = total_finished.project_id
-		ORDER BY project.id;`, function(err, result, fields){
-		if (err) throw err;
-            console.log(`This is the result: ${result}`);
+		ORDER BY project.id;`, function (err, result, fields) {
+        if (err) throw err;
+        console.log(`This is the result: ${result}`);
         res.json(result);
-	});
+    });
 });
 
 // GET /project/:id
-projectRouter.get('/:tcorp_id', verifyToken, function(req, res, next) {
+projectRouter.get('/:tcorp_id', verifyToken, function (req, res, next) {
     // REQUIRED: 
     //   tcorp_id (Unique)
 
     var projectID = req.params.tcorp_id;
     db.query(`
         SELECT project.id, project.tcorp_id, project.customer_id, project.name_th, project.description, project.value, project.contract_id,
-        project.end_contract_date, project.warranty_duration, project.billing_configuration_id, project.project_category_id, project.is_aborted, project.is_template, customer.name, project_category.type
+        project.end_contract_date, project.warranty_duration, project.billing_configuration_id, project.project_category_id, project.sign_contract, project.is_aborted, project.is_template, customer.name, project_category.type
         FROM ((project
         INNER JOIN
             customer ON project.customer_id = customer.id)
         INNER JOIN
             project_category ON project.project_category_id = project_category.id)
         WHERE
-            tcorp_id = '${projectID}';`, function (err, result, fields) 
-    {
-    if (err) throw err;
-	    res.json(result);
+            tcorp_id = '${projectID}';`, function (err, result, fields) {
+        if (err) throw err;
+        res.json(result);
     });
 });
 
@@ -265,12 +1249,12 @@ projectRouter.put('/:tcorp_id', verifyToken, function (req, res) {
     var projectUpdateInfo = req.body;
     console.log("..", projectUpdateInfo)
 
-    var update_set = Object.keys(projectUpdateInfo).map(value=>{
+    var update_set = Object.keys(projectUpdateInfo).map(value => {
         return ` ${value}  = "${projectUpdateInfo[value]}"`;
     });
     sql = `UPDATE project SET ${update_set.join(" ,")} WHERE tcorp_id = "${projectID}"`
     db.query(sql, function (err, result) {
-    if (err) throw err;
+        if (err) throw err;
         res.json({
             tcorp_id: projectID,
             updateInfo: projectUpdateInfo
@@ -285,9 +1269,8 @@ projectRouter.delete('/:tcorp_id', verifyToken, function (req, res) {
 
     var TCorpID = req.params.tcorp_id;
     db.query(`
-        DELETE FROM project WHERE tcorp_id="${TCorpID}"`, function (err, result) 
-    {
-    if (err) throw err;
+        DELETE FROM project WHERE tcorp_id="${TCorpID}"`, function (err, result) {
+        if (err) throw err;
         res.json({
             tcorp_id: TCorpID
         });
@@ -330,10 +1313,9 @@ projectRouter.get('/:tcorp_id/tasks', verifyToken, (req, res, next) => {
             user ON task.assigned_to_id = user.id
         WHERE
             tcorp_id = '${projectID}'
-        ORDER BY task.seq_no ASC;`, function (err, result, fields) 
-    {
-    if (err) throw err;
-	    res.json(result);
+        ORDER BY task.seq_no ASC;`, function (err, result, fields) {
+        if (err) throw err;
+        res.json(result);
     });
 });
 
@@ -347,14 +1329,14 @@ projectRouter.post('/tasks', verifyToken, function (req, res) {
     var taskInfo = req.body;
     console.log("taskInfo", taskInfo)
     var tcorpID = taskInfo.tcorp_id;
-    delete taskInfo.tcorp_id; 
+    delete taskInfo.tcorp_id;
     //taskInfo['deadline'] = db.escape(new Date(taskInfo.deadline));
     //taskInfo['updated_at'] = db.escape(new Date(taskInfo.updated_at));
     db.query(`INSERT INTO task (project_id,${Object.keys(taskInfo).join()})
-                        VALUES ((SELECT id FROM project WHERE tcorp_id='${tcorpID}'),"${Object.values(taskInfo).join('","')}")`, function(err, result, fields) {
-                        //VALUES (${Object.values(taskInfo).join()},)`, [[Object.values(taskInfo)]], function(err, result, fields) {
-    if (err) throw err;
-	    res.json({
+                        VALUES ((SELECT id FROM project WHERE tcorp_id='${tcorpID}'),"${Object.values(taskInfo).join('","')}")`, function (err, result, fields) {
+        //VALUES (${Object.values(taskInfo).join()},)`, [[Object.values(taskInfo)]], function(err, result, fields) {
+        if (err) throw err;
+        res.json({
             id: result.insertId
         });
     });
@@ -392,7 +1374,7 @@ projectRouter.put('/:tcorp_id/tasks/:task_id', verifyToken, function (req, res) 
     // console.log(typeof projectUpdateInfo[0], projectUpdateInfo[0]['task_status_id']);
 
     delete projectUpdateInfo['tcorp_id'];
-    var update_set = Object.keys(projectUpdateInfo).map(value=>{
+    var update_set = Object.keys(projectUpdateInfo).map(value => {
         return ` ${value}  = "${projectUpdateInfo[value]}"`;
     });
     // console.log("update_set", update_set)
@@ -406,7 +1388,7 @@ projectRouter.put('/:tcorp_id/tasks/:task_id', verifyToken, function (req, res) 
     sql = `UPDATE task SET ${update_set.join(" ,")} WHERE project_id = (SELECT id FROM project WHERE tcorp_id="${tcorpID}") AND seq_no = "${seqNO}"`
     // console.log("SQL:", sql)
     db.query(sql, function (err, result) {
-    if (err) throw err;
+        if (err) throw err;
         res.json({
             tcorp_id: tcorpID,
             seq_no: seqNO,
@@ -425,8 +1407,7 @@ projectRouter.delete('/:tcorp_id/tasks/:seq_no', verifyToken, function (req, res
         DELETE FROM task 
         WHERE
             project_id=(SELECT id FROM project WHERE tcorp_id='${tcorpID}')
-            AND seq_no=${seqNO};`, function (err, result) 
-    {
+            AND seq_no=${seqNO};`, function (err, result) {
         if (err) throw err;
         // Query all the task in that project where sequence number > seqNO, and replace it by seq_no-1
         db.query(`UPDATE task t1
@@ -438,12 +1419,12 @@ projectRouter.delete('/:tcorp_id/tasks/:seq_no', verifyToken, function (req, res
             AND project_id = (SELECT id FROM project WHERE tcorp_id='${tcorpID}')) t2
             ON t1.id=t2.id
             SET t1.seq_no=t2.new_seq_no
-            WHERE t1.project_id = (SELECT id FROM project WHERE tcorp_id='${tcorpID}')`, function(err,result){
-            if(err) throw err;
+            WHERE t1.project_id = (SELECT id FROM project WHERE tcorp_id='${tcorpID}')`, function (err, result) {
+            if (err) throw err;
             res.json({
                 tcorp_id: tcorpID,
                 seq_no: seqNO
-	        });
+            });
         });
 
     });
@@ -456,10 +1437,9 @@ projectRouter.delete('/tasks/:tcorp_id', verifyToken, function (req, res) {
     db.query(`
         DELETE FROM task 
         WHERE
-            project_id='${projectID}';`, function (err, result) 
-    {
-    if (err) throw err;
-	    res.json({
+            project_id='${projectID}';`, function (err, result) {
+        if (err) throw err;
+        res.json({
             tcorp_id: projectID,
             seq_no: seqNO
         });
